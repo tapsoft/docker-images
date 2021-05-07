@@ -22,9 +22,9 @@ jobs:
     - name: Initialize variables
       run: |
         image_name=${{ github.event.inputs.image_name }}
-        tag_name=docker-${image_name//\//-}
         tags_list=$(echo ${{ github.event.inputs.tags }} | sed 's/,/ /g')
         [ -z $tags_list ] && tags_list+=latest
+        tag_name=docker-${image_name//\//-}-$(echo $tags_list | cut -d' ' -f 1)
         file_name=${tag_name}.tar.gz
         echo "image_name=${image_name}" >> $GITHUB_ENV
         echo "tag_name=${tag_name}" >> $GITHUB_ENV
