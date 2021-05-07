@@ -1,0 +1,56 @@
+# This is a basic workflow that is manually triggered
+
+name: Docker Image Exporter
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Docker registry image name'
+        default: 'registry'
+        required: true
+      tags:
+        description: 'Tags separated by space or comma'
+        default: '2.7.1, 2.7, 2'
+        required: false
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Initialize variables
+      run: |
+        image_name=${{ github.event.inputs.image_name }}
+        tag_name=docker-${image_name//\//-}
+        tags_list=$(echo ${{ github.event.inputs.tags }} | sed 's/,/ /g')
+        [ -z $tags_list ] && tags_list+=latest
+        file_name=${tag_name}.tar.gz
+        echo "image_name=${image_name}" >> $GITHUB_ENV
+        echo "tag_name=${tag_name}" >> $GITHUB_ENV
+        echo "tags_list=${tags_list}" >> $GITHUB_ENV
+        echo "file_name=${file_name}" >> $GITHUB_ENV
+        
+    - name: Pull docker image
+      run: |
+        echo "image_list_md<<EOF" >> $GITHUB_ENV
+        for tag in ${{ env.tags_list }}; do
+          echo "- ${{ env.image_name }}:${tag}" >> $GITHUB_ENV
+          image_list+="${{ env.image_name }}:${tag} "
+          docker pull ${{ env.image_name }}:${tag}
+        done
+        echo "EOF" >> $GITHUB_ENV
+        echo "image_list=${image_list}" >> $GITHUB_ENV
+      
+    - name: Export docker image
+      run: docker save ${{ env.image_list }} | gzip > ${{ env.file_name }}
+      
+    - name: Upload to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ env.file_name }}
+        asset_name: ${{ env.file_name }}
+        tag: ${{ env.tag_name }}
+        overwrite: true
+        body: ${{ env.image_list_md }}
