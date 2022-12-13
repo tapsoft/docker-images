@@ -1,6 +1,6 @@
 # This is a basic workflow that is manually triggered
 
-name: Docker Image Exporter
+name: Docker Image Exporter (Artifact)
 
 on:
   workflow_dispatch:
@@ -10,9 +10,6 @@ on:
         required: true
       tags:
         description: 'Tags separated by space or comma'
-        required: false
-      release_tag:
-        description: 'Release tag (optional)'
         required: false
 
 jobs:
@@ -26,10 +23,7 @@ jobs:
         tags_list=$(echo ${{ github.event.inputs.tags }} | sed 's/,/ /g')
         [ -z $tags_list ] && tags_list+=latest
         file_name=docker-${image_name//\//-}-$(echo $tags_list | cut -d' ' -f 1).tar.gz
-        tag_name=${{ github.event.inputs.release_tag }}
-        [[ -z "$tag_name" ]] && tag_name=docker-${image_name//\//-}
         echo "image_name=${image_name}" >> $GITHUB_ENV
-        echo "tag_name=${tag_name}" >> $GITHUB_ENV
         echo "tags_list=${tags_list}" >> $GITHUB_ENV
         echo "file_name=${file_name}" >> $GITHUB_ENV
         
