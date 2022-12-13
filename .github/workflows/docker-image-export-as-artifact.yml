@@ -1,0 +1,57 @@
+# This is a basic workflow that is manually triggered
+
+name: Docker Image Exporter
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Docker registry image name'
+        required: true
+      tags:
+        description: 'Tags separated by space or comma'
+        required: false
+      release_tag:
+        description: 'Release tag (optional)'
+        required: false
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Initialize variables
+      run: |
+        image_name=${{ github.event.inputs.image_name }}
+        tags_list=$(echo ${{ github.event.inputs.tags }} | sed 's/,/ /g')
+        [ -z $tags_list ] && tags_list+=latest
+        file_name=docker-${image_name//\//-}-$(echo $tags_list | cut -d' ' -f 1).tar.gz
+        tag_name=${{ github.event.inputs.release_tag }}
+        [[ -z "$tag_name" ]] && tag_name=docker-${image_name//\//-}
+        echo "image_name=${image_name}" >> $GITHUB_ENV
+        echo "tag_name=${tag_name}" >> $GITHUB_ENV
+        echo "tags_list=${tags_list}" >> $GITHUB_ENV
+        echo "file_name=${file_name}" >> $GITHUB_ENV
+        
+    - name: Pull docker image
+      run: |
+        sep=_
+        [[ ${{ env.image_name }} == */* ]] && sep=r
+        echo "image_list_md<<EOF" >> $GITHUB_ENV
+        for tag in ${{ env.tags_list }}; do
+          echo "- [${{ env.image_name }}:${tag}](https://hub.docker.com/${sep}/${{ env.image_name }}/tags?name=${tag})" >> $GITHUB_ENV
+          image_list+="${{ env.image_name }}:${tag} "
+          docker pull ${{ env.image_name }}:${tag}
+        done
+        echo "- [DockerHub](https://hub.docker.com/${sep}/${{ env.image_name }})" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        echo "image_list=${image_list}" >> $GITHUB_ENV
+      
+    - name: Export docker image
+      run: docker save ${{ env.image_list }} | gzip > ${{ env.file_name }}
+      
+    - name: Upload to artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.file_name }}
+        path: ${{ env.file_name }}
