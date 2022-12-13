@@ -31,14 +31,10 @@ jobs:
       run: |
         sep=_
         [[ ${{ env.image_name }} == */* ]] && sep=r
-        echo "image_list_md<<EOF" >> $GITHUB_ENV
         for tag in ${{ env.tags_list }}; do
-          echo "- [${{ env.image_name }}:${tag}](https://hub.docker.com/${sep}/${{ env.image_name }}/tags?name=${tag})" >> $GITHUB_ENV
           image_list+="${{ env.image_name }}:${tag} "
           docker pull ${{ env.image_name }}:${tag}
         done
-        echo "- [DockerHub](https://hub.docker.com/${sep}/${{ env.image_name }})" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
         echo "image_list=${image_list}" >> $GITHUB_ENV
       
     - name: Export docker image
