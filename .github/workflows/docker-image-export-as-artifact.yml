@@ -41,7 +41,7 @@ jobs:
       run: docker save ${{ env.image_list }} | gzip > ${{ env.file_name }}
       
     - name: Upload to artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.file_name }}
         path: ${{ env.file_name }}
